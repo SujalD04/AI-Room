@@ -1,0 +1,24 @@
+src/routes/notes.ts(91,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"Note"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"Note"> | undefined'.
+src/routes/notes.ts(101,29): error TS2339: Property 'room' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; roomId: string; authorId: string; content: JsonValue; title: string; type: NoteType; isPinned: boolean; }'.
+src/routes/notes.ts(109,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/notes.ts(131,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"Note"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"Note"> | undefined'.
+src/routes/notes.ts(140,29): error TS2339: Property 'room' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; roomId: string; authorId: string; content: JsonValue; title: string; type: NoteType; isPinned: boolean; }'.
+src/routes/notes.ts(147,45): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/notes.ts(168,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"Note"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"Note"> | undefined'.
+src/routes/notes.ts(178,31): error TS2339: Property 'room' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; roomId: string; authorId: string; content: JsonValue; title: string; type: NoteType; isPinned: boolean; }'.
+src/routes/notes.ts(178,50): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/routes/notes.ts(186,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"TodoItem"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"TodoItem"> | undefined'.
+src/routes/notes.ts(192,17): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/notes.ts(195,25): error TS18048: 'maxOrder._max' is possibly 'undefined'.
+src/routes/notes.ts(211,65): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"TodoItem"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"TodoItem"> | undefined'.
+src/routes/notes.ts(218,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/rooms.ts(126,45): error TS7006: Parameter 'm' implicitly has an 'any' type.
