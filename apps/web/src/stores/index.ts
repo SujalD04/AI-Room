@@ -81,7 +81,10 @@ export const useRoomStore = create<RoomState>((set) => ({
         members: s.members.filter((m) => m.userId !== userId),
     })),
     setThreads: (threads) => set({ threads }),
-    addThread: (thread) => set((s) => ({ threads: [thread, ...s.threads] })),
+    addThread: (thread) => set((s) => {
+        if (s.threads.some(t => t.id === thread.id)) return s; // dedup
+        return { threads: [thread, ...s.threads] };
+    }),
     removeThread: (threadId) => set((s) => ({
         threads: s.threads.filter((t) => t.id !== threadId),
     })),

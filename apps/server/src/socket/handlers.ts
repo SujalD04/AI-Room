@@ -20,6 +20,9 @@ import type {
 // Track online users per room
 const roomPresence = new Map<string, Set<string>>();
 
+// Track voice channel participants per room
+const voicePresence = new Map<string, Set<string>>();
+
 // Socket-level AI Rate Limiting (Simple Cooldown)
 const aiCooldowns = new Map<string, number>(); // userId -> lastRequestTime
 const COOLDOWN_MS = 2000; // 2 seconds between AI requests
@@ -172,7 +175,16 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         // ─── Room: Leave ───
         socket.on('room:leave', () => {
             if (socket.data.roomId) {
-                socket.leave(socket.data.roomId);
+                // Clear media from memory
+                handleMediaDisconnect(io as any, socket as any, userId, socket.data.roomId);
+
+                // Handle voice presence leave
+                const roomVoiceSet = voicePresence.get(socket.data.roomId);
+                if (roomVoiceSet && roomVoiceSet.has(userId)) {
+                    roomVoiceSet.delete(userId);
+                    socket.to(socket.data.roomId).emit('room:voice_left', { userId });
+                }
+
                 roomPresence.get(socket.data.roomId)?.delete(userId);
 
                 socket.to(socket.data.roomId).emit('room:member_left', { userId });
@@ -183,8 +195,39 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                     memberCount: online.length,
                 });
 
-                socket.data.roomId = undefined;
-                socket.data.roomSlug = undefined;
+                socket.leave(socket.data.roomId);
+                delete socket.data.roomId;
+                delete socket.data.roomSlug;
+            }
+        });
+
+        // ─── Voice Channel: Explicit Join ───
+        socket.on('room:voice_join', (callback) => {
+            if (!socket.data.roomId) return;
+            const roomId = socket.data.roomId;
+
+            if (!voicePresence.has(roomId)) {
+                voicePresence.set(roomId, new Set());
+            }
+            const roomVoiceSet = voicePresence.get(roomId)!;
+            roomVoiceSet.add(userId);
+
+            socket.to(roomId).emit('room:voice_joined', { userId });
+
+            if (callback) {
+                callback({ participants: Array.from(roomVoiceSet) });
+            }
+        });
+
+        // ─── Voice Channel: Explicit Leave ───
+        socket.on('room:voice_leave', () => {
+            if (!socket.data.roomId) return;
+            const roomId = socket.data.roomId;
+
+            const roomVoiceSet = voicePresence.get(roomId);
+            if (roomVoiceSet && roomVoiceSet.has(userId)) {
+                roomVoiceSet.delete(userId);
+                socket.to(roomId).emit('room:voice_left', { userId });
             }
         });
 
@@ -574,10 +617,28 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         });
 
         // ─── Disconnect ───
-        socket.on('disconnect', () => {
+        socket.on('disconnect', async () => {
             if (socket.data.roomId) {
+                // Clear typing indicator for the disconnected user
+                const user = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { username: true },
+                });
+                socket.to(socket.data.roomId).emit('room:typing', {
+                    userId,
+                    username: user?.username || 'Unknown',
+                    isTyping: false,
+                });
+
                 // Clean up mediasoup resources
                 handleMediaDisconnect(io as any, socket as any, userId, socket.data.roomId);
+
+                // Handle voice channel explicit disconnect
+                const roomVoiceSet = voicePresence.get(socket.data.roomId);
+                if (roomVoiceSet && roomVoiceSet.has(userId)) {
+                    roomVoiceSet.delete(userId);
+                    socket.to(socket.data.roomId).emit('room:voice_left', { userId });
+                }
 
                 roomPresence.get(socket.data.roomId)?.delete(userId);
 

@@ -5,6 +5,7 @@ import { Device } from 'mediasoup-client';
 import { getSocket } from '@/lib/socket';
 import { useRoomStore } from '@/stores';
 import { Phone, PhoneOff, Mic, MicOff, Camera, CameraOff, Monitor, Zap } from './Icons';
+import { useToast } from '@/components/Toast';
 
 interface VoiceChannelProps {
     roomId: string;
@@ -13,6 +14,7 @@ interface VoiceChannelProps {
 
 export default function VoiceChannel({ roomId, userId }: VoiceChannelProps) {
     const roomStore = useRoomStore();
+    const toast = useToast();
 
     const [inVoice, setInVoice] = useState(false);
     const [audioEnabled, setAudioEnabled] = useState(false);
@@ -122,14 +124,50 @@ export default function VoiceChannel({ roomId, userId }: VoiceChannelProps) {
             remoteTracksRef.current.delete(peerId);
         };
 
+        const handleVoiceJoined = ({ userId: joinedUserId }: any) => {
+            if (joinedUserId === userId) return;
+            const u = useRoomStore.getState().members.find(m => m.userId === joinedUserId)?.user;
+            if (u) toast.info(`🎙️ ${u.username} joined Voice Channel`);
+
+            setVoiceMembers(prev => {
+                const next = new Map(prev);
+                if (!next.has(joinedUserId)) {
+                    next.set(joinedUserId, { userId: joinedUserId, audioOn: false, videoOn: false, screenOn: false });
+                }
+                return next;
+            });
+        };
+
+        const handleVoiceLeft = ({ userId: leftUserId }: any) => {
+            const mem = voiceMembers.get(leftUserId);
+
+            const u = useRoomStore.getState().members.find(m => m.userId === leftUserId)?.user;
+            if (u) toast.info(`🚪 ${u.username} left Voice Channel`);
+
+            setVoiceMembers(prev => {
+                const next = new Map(prev);
+                next.delete(leftUserId);
+                return next;
+            });
+            const vEl = remoteVideoRefs.current.get(leftUserId);
+            if (vEl) vEl.srcObject = null;
+            const aEl = remoteAudioRefs.current.get(leftUserId);
+            if (aEl) aEl.srcObject = null;
+            remoteTracksRef.current.delete(leftUserId);
+        };
+
         socket.on('media:newProducer', handleNewProducer);
         socket.on('media:producerClosed', handleProducerClosed);
         socket.on('media:peerDisconnected', handlePeerDisconnected);
+        socket.on('room:voice_joined', handleVoiceJoined);
+        socket.on('room:voice_left', handleVoiceLeft);
 
         return () => {
             socket.off('media:newProducer', handleNewProducer);
             socket.off('media:producerClosed', handleProducerClosed);
             socket.off('media:peerDisconnected', handlePeerDisconnected);
+            socket.off('room:voice_joined', handleVoiceJoined);
+            socket.off('room:voice_left', handleVoiceLeft);
         };
     }, [inVoice, echoTest]);
 
@@ -190,12 +228,20 @@ export default function VoiceChannel({ roomId, userId }: VoiceChannelProps) {
 
             recvTransportRef.current = recvTransport;
 
-            setInVoice(true);
-
-            setVoiceMembers(prev => {
-                const next = new Map(prev);
-                next.set(userId, { userId, audioOn: false, videoOn: false, screenOn: false });
-                return next;
+            socket.emit('room:voice_join', (res: any) => {
+                setVoiceMembers(prev => {
+                    const next = new Map(prev);
+                    if (res && res.participants) {
+                        res.participants.forEach((p: string) => {
+                            if (!next.has(p)) {
+                                next.set(p, { userId: p, audioOn: false, videoOn: false, screenOn: false });
+                            }
+                        });
+                    }
+                    next.set(userId, { userId, audioOn: false, videoOn: false, screenOn: false });
+                    return next;
+                });
+                setInVoice(true);
             });
 
             socket.emit('media:getProducers', {}, async (res: any) => {
@@ -223,6 +269,9 @@ export default function VoiceChannel({ roomId, userId }: VoiceChannelProps) {
     };
 
     const leaveVoice = () => {
+        const socket: any = getSocket();
+        socket?.emit('room:voice_leave');
+
         sendTransportRef.current?.close();
         recvTransportRef.current?.close();
         localAudioStream.current?.getTracks().forEach(t => t.stop());

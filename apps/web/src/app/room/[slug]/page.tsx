@@ -71,49 +71,35 @@ const BranchNode = ({
     const hasChildren = node.children.length > 0;
     const isActive = activeLeafId === node.msg.id;
     const isLineage = lineageIds.has(node.msg.id);
-
-    // Find the child that continues the current active lineage
-    const lineageChild = node.children.find(c => lineageIds.has(c.msg.id));
-    const otherChildren = node.children.filter(c => c !== lineageChild);
-
-    // If we're in the lineage, we don't indent this specific node container relative to its parent container
-    // unless the parent specifically indents its children.
-    const indentStyle = !isLineage ? { marginLeft: '12px' } : {};
+    const hasFork = node.children.length > 1;
 
     return (
-        <div style={{ ...indentStyle, marginBottom: '2px' }}>
+        <div style={{ marginBottom: '1px' }}>
             <div
                 className={`sidebar-item ${isActive ? 'active' : ''}`}
-                style={{ height: 'auto', padding: '6px 8px', borderRadius: '8px' }}
+                style={{
+                    height: 'auto',
+                    padding: '5px 8px',
+                    borderRadius: '6px',
+                    borderLeft: isLineage ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                }}
                 onClick={() => onSelect(node.msg.id)}
             >
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        width: '100%',
-                        overflow: 'hidden'
-                    }}
-                >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', overflow: 'hidden' }}>
                     {hasChildren ? (
                         <button
                             className="btn-icon-ghost"
-                            style={{ width: 16, height: 16, padding: 0 }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsExpanded(!isExpanded);
-                            }}
+                            style={{ width: 16, height: 16, padding: 0, flexShrink: 0 }}
+                            onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
                         >
                             {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                         </button>
                     ) : (
-                        <div style={{ width: 16 }} />
+                        <div style={{ width: 16, flexShrink: 0 }} />
                     )}
-
                     <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1px' }}>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                 {node.msg.authorType === 'AI' ? (
                                     <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                                         <Bot size={10} /> AI
@@ -122,18 +108,11 @@ const BranchNode = ({
                                     node.msg.authorName || 'User'
                                 )}
                             </span>
-                            <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)' }}>
+                            <span style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)' }}>
                                 {new Date(node.msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>
-                        <p style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-primary)',
-                            margin: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                        }}>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {node.msg.content}
                         </p>
                     </div>
@@ -142,32 +121,36 @@ const BranchNode = ({
 
             {isExpanded && hasChildren && (
                 <div>
-                    {/* Render other branches (forks) indented with a line */}
-                    {otherChildren.length > 0 && (
-                        <div style={{ borderLeft: '1px solid var(--border-subtle)', marginLeft: '7px', marginTop: '4px', paddingLeft: '4px' }}>
-                            {otherChildren.map(child => (
+                    {hasFork && (
+                        <div style={{ fontSize: '0.6rem', color: 'var(--accent-warning)', padding: '2px 8px 2px 24px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <GitBranch size={10} /> {node.children.length} branches
+                        </div>
+                    )}
+                    {node.children.map((child, idx) => {
+                        const isChildLineage = lineageIds.has(child.msg.id);
+                        // Only indent side-branches when there's a fork
+                        const shouldIndent = hasFork && !isChildLineage;
+                        return (
+                            <div key={child.msg.id} style={{
+                                marginLeft: shouldIndent ? '16px' : '0',
+                                borderLeft: shouldIndent ? '2px solid var(--accent-warning)' : 'none',
+                                paddingLeft: shouldIndent ? '4px' : '0',
+                            }}>
+                                {hasFork && (
+                                    <div style={{ fontSize: '0.58rem', color: shouldIndent ? 'var(--accent-warning)' : 'var(--accent-primary)', padding: '1px 8px', opacity: 0.8 }}>
+                                        {isChildLineage ? '● current' : `○ branch ${idx + 1}`}
+                                    </div>
+                                )}
                                 <BranchNode
-                                    key={child.msg.id}
                                     node={child}
-                                    level={level + 1}
+                                    level={level + (shouldIndent ? 1 : 0)}
                                     activeLeafId={activeLeafId}
                                     onSelect={onSelect}
                                     lineageIds={lineageIds}
                                 />
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Render lineage continuation flat (no extra margin or line) */}
-                    {lineageChild && (
-                        <BranchNode
-                            node={lineageChild}
-                            level={level} // keep level same for lineage
-                            activeLeafId={activeLeafId}
-                            onSelect={onSelect}
-                            lineageIds={lineageIds}
-                        />
-                    )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -278,6 +261,12 @@ export default function RoomPage() {
                 toast.info('This thread has been deleted');
             }
         });
+        socket.on('room:deleted', () => {
+            toast.error('This room has been deleted by the host');
+            roomStore.clearRoom();
+            chatStore.clearChat();
+            router.push('/dashboard');
+        });
 
         return () => {
             socket.emit('room:leave');
@@ -294,6 +283,7 @@ export default function RoomPage() {
             socket.off('notes:deleted');
             socket.off('room:thread_created');
             socket.off('room:thread_deleted');
+            socket.off('room:deleted');
             roomStore.clearRoom();
             chatStore.clearChat();
         };
@@ -381,8 +371,6 @@ export default function RoomPage() {
         if (!content || !chatStore.activeThreadId) return;
 
         const socket = getSocket();
-        const messages = chatStore.messages;
-        const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
 
         socket.emit(
             'chat:send_message',
@@ -400,8 +388,10 @@ export default function RoomPage() {
         );
 
         setMessageInput('');
+        // Clear typing indicator after sending
+        socket.emit('room:typing', { isTyping: false });
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    }, [messageInput, chatStore.activeThreadId, chatStore.messages, requestAi]);
+    }, [messageInput, chatStore.activeThreadId, chatStore.activeLeafId, requestAi]);
 
     // ─── Branch (inline, no prompt) ───
     const handleBranchSubmit = (messageId: string) => {
@@ -524,6 +514,11 @@ export default function RoomPage() {
         }
     };
 
+    const handleInputBlur = () => {
+        const socket = getSocket();
+        socket.emit('room:typing', { isTyping: false });
+    };
+
     const inviteLink = typeof window !== 'undefined' ? `${window.location.origin}/join/${slug}` : '';
     const copyInviteLink = () => {
         navigator.clipboard.writeText(inviteLink);
@@ -626,7 +621,7 @@ export default function RoomPage() {
                         ) : (
                             roomStore.threads.map((thread) => {
                                 // Role-based: thread creator can delete own, host can delete any
-                                const canDelete = isHost; // TODO: track creatorId on thread for member self-delete
+                                const canDelete = isHost || thread.creatorId === user?.id;
                                 return (
                                     <div
                                         key={thread.id}
@@ -848,6 +843,7 @@ export default function RoomPage() {
                                 value={messageInput}
                                 onChange={(e) => handleInputChange(e.target.value)}
                                 onKeyDown={handleKeyDown}
+                                onBlur={handleInputBlur}
                                 disabled={!chatStore.activeThreadId}
                             />
                             <button

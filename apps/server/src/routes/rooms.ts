@@ -260,6 +260,14 @@ router.delete('/:slug', async (req: Request, res: Response): Promise<void> => {
             data: { isActive: false },
         });
 
+        // Notify all users in the room via socket so they get kicked immediately
+        try {
+            const { io } = require('../index');
+            if (io) {
+                io.to(room.id).emit('room:deleted', { roomId: room.id, reason: 'Room deleted by host' });
+            }
+        } catch (_) { /* socket not available in tests */ }
+
         res.json({ message: 'Room deleted successfully' });
     } catch (err) {
         console.error('Delete room error:', err);

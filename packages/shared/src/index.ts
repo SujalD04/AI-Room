@@ -156,6 +156,16 @@ export interface ServerToClientEvents {
     'room:typing': (data: { userId: string; username: string; isTyping: boolean }) => void;
     'room:thread_created': (data: { thread: ConversationThread }) => void;
     'room:thread_deleted': (data: { threadId: string }) => void;
+    // Voice channel explicit tracking
+    'room:voice_join': (callback?: (res: { participants: string[] }) => void) => void;
+    'room:voice_leave': () => void;
+    // Media
+    'media:getRouterCapabilities': (data: any, callback: Function) => void;
+    'room:deleted': (data: { roomId: string; reason?: string }) => void;
+
+    // Voice channel explicit tracking
+    'room:voice_joined': (data: { userId: string }) => void;
+    'room:voice_left': (data: { userId: string }) => void;
 
     // Chat
     'chat:message': (message: MessageNode) => void;
