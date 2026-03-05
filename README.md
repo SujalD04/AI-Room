@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>AIRoom 🎙️🤖</h1>
+  <h1>AIRoom</h1>
   <p>A multiplayer, real-time collaboration workspace with branching chat, built-in AI assistance, and high-performance WebRTC voice channels.</p>
 </div>
 
