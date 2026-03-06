@@ -41,6 +41,11 @@ model Room {
   hostId     String
   isPrivate  Boolean  @default(false)
   password   String?
+
+  maxMembers Int?      // NEW
+  isActive   Boolean   @default(true) // NEW
+  settings   Json?     // NEW
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -70,12 +75,18 @@ model RoomMember {
 // ─── API Keys ───
 
 model ApiKey {
-  id        String   @id @default(uuid())
-  userId    String
-  provider  Provider
-  keyName   String
-  keyHash   String   // Encrypted key
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  userId       String
+  provider     Provider
+  keyName      String
+  keyHash      String
+
+  label        String?  // NEW
+  encryptedKey String?  // NEW
+  iv           String?  // NEW
+  authTag      String?  // NEW
+
+  createdAt    DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -139,6 +150,8 @@ model MessageEdge {
   parentId String
   childId  String
 
+  edgeType String @default("REPLY") // NEW
+
   parent MessageNode @relation("EdgeParent", fields: [parentId], references: [id], onDelete: Cascade)
   child  MessageNode @relation("EdgeChild", fields: [childId], references: [id], onDelete: Cascade)
 
@@ -158,31 +171,47 @@ model Note {
   roomId    String
   authorId  String
   title     String
-  content   Json     @default("{}") // Rich text or simple string
+  content   Json     @default("{}")
+
+  type      String   @default("NOTE") // NEW
+  isPinned  Boolean  @default(false)  // NEW
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   room   Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
   author User @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
+  todos  TodoItem[] // NEW relation
+
   @@index([roomId])
 }
 
 model TodoItem {
   id          String    @id @default(uuid())
+
   roomId      String
+  noteId      String?   // NEW
+
   title       String
   description String?
   isCompleted Boolean   @default(false)
+
+  order       Int       @default(0) // NEW
+
   dueDate     DateTime?
   assigneeId  String?
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   room     Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  note     Note? @relation(fields: [noteId], references: [id], onDelete: Cascade) // NEW
+
   assignee User? @relation("TodoAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
 
   @@index([roomId])
+  @@index([noteId])
 }
 
 model PasswordResetToken {
