@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores';
-import { Zap, Users, Crown, AlertTriangle } from '@/components/Icons';
+import { useTheme } from '@/components/ThemeProvider';
+import { Users, Crown, AlertTriangle, Sun, Moon } from '@/components/Icons';
 
 export default function JoinPage() {
     const router = useRouter();
     const params = useParams();
     const slug = params.slug as string;
     const { isAuthenticated, loadFromStorage } = useAuthStore();
+    const { theme, toggleTheme } = useTheme();
     const [room, setRoom] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [joining, setJoining] = useState(false);
@@ -70,55 +72,82 @@ export default function JoinPage() {
     }
 
     return (
-        <div className="content-center" style={{ background: 'var(--gradient-dark)' }}>
-            <div className="auth-container">
-                <div className="auth-card glass-strong" style={{ textAlign: 'center' }}>
-                    <div style={{ marginBottom: '16px' }}>
-                        <a href="/" className="logo" style={{ justifyContent: 'center' }}>
-                            <div className="logo-icon" style={{ width: 56, height: 56 }}>
-                                <Zap size={28} />
-                            </div>
-                        </a>
-                    </div>
-                    <h1 className="auth-title">Join Room</h1>
+        <div className="auth-page-wrapper">
+            <div className="auth-card-modern" style={{ textAlign: 'center' }}>
+                <button
+                    onClick={toggleTheme}
+                    className="btn btn-ghost"
+                    style={{
+                        position: 'absolute',
+                        top: '16px',
+                        right: '16px',
+                        padding: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--text-tertiary)'
+                    }}
+                    aria-label="Toggle Theme"
+                    type="button"
+                >
+                    {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
 
-                    {error ? (
-                        <>
-                            <div
-                                style={{
-                                    color: 'var(--accent-danger)',
-                                    margin: '16px 0',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px',
-                                }}
-                            >
-                                <AlertTriangle size={16} /> {error}
-                            </div>
-                            <button className="btn btn-secondary" onClick={() => router.push('/dashboard')}>
-                                Go to Dashboard
-                            </button>
-                        </>
-                    ) : room ? (
-                        <>
-                            <p style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '16px' }}>{room.name}</p>
-                            <p style={{ color: 'var(--text-secondary)', margin: '8px 0 24px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                <Crown size={14} /> Hosted by <strong>{room.host?.username}</strong>
-                                <span style={{ opacity: 0.5 }}>·</span>
-                                <Users size={14} /> {room.memberCount}/{room.maxMembers}
-                            </p>
-                            <button
-                                className="btn btn-primary btn-lg"
-                                style={{ width: '100%' }}
-                                onClick={handleJoin}
-                                disabled={joining}
-                            >
-                                {joining ? 'Joining...' : 'Join Room'}
-                            </button>
-                        </>
-                    ) : null}
+                <div className="auth-header-modern">
+                    <div className="auth-logo-box">
+                        <img
+                            src="/logo.png"
+                            alt="AIRoom Logo"
+                            style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                        />
+                    </div>
+                    <h1 className="auth-title-modern">Join Room</h1>
+                    <p className="auth-subtitle-modern">You've been invited to collaborate</p>
                 </div>
+
+                {error ? (
+                    <>
+                        <div
+                            style={{
+                                color: 'var(--accent-danger)',
+                                background: 'rgba(225, 112, 85, 0.15)',
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                marginBottom: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                            }}
+                        >
+                            <AlertTriangle size={16} /> {error}
+                        </div>
+                        <button className="btn-modern" onClick={() => router.push('/dashboard')}>
+                            Go to Dashboard
+                        </button>
+                    </>
+                ) : room ? (
+                    <>
+                        <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderRadius: '16px', marginBottom: '24px' }}>
+                            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>{room.name}</p>
+                            <p style={{ color: 'var(--text-secondary)', margin: '8px 0 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <Crown size={14} /> Hosted by <strong style={{ color: 'var(--text-primary)' }}>{room.host?.username}</strong>
+                            </p>
+                            <p style={{ color: 'var(--text-tertiary)', margin: '4px 0 0', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <Users size={14} /> {room.memberCount} / {room.maxMembers} Members
+                            </p>
+                        </div>
+
+                        <button
+                            className="btn-modern"
+                            style={{ width: '100%' }}
+                            onClick={handleJoin}
+                            disabled={joining}
+                        >
+                            {joining ? 'Joining Room...' : 'Join Room'}
+                        </button>
+                    </>
+                ) : null}
             </div>
         </div>
     );

@@ -404,19 +404,24 @@ export default function SettingsPage() {
 
                 {/* ─── API Keys ─── */}
                 <div className="settings-section">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 className="settings-section-title" style={{ border: 'none', margin: 0, padding: 0 }}>
-                            <Key size={18} style={{ marginRight: '8px', verticalAlign: 'text-bottom' }} />
-                            API Keys (BYOK)
-                        </h2>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <h2 className="settings-section-title" style={{ border: 'none', margin: 0, padding: 0 }}>
+                                <Key size={18} style={{ marginRight: '8px', verticalAlign: 'text-bottom' }} />
+                                API Keys (BYOK)
+                            </h2>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '8px 0 4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Shield size={14} color="var(--accent-success)" />
+                                Encrypted with AES-256-GCM — only decrypted during API calls
+                            </p>
+                            <a href="/byok" style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '16px', fontWeight: 600 }}>
+                                Learn more about Bring Your Own Key <ExternalLink size={12} />
+                            </a>
+                        </div>
                         <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>
                             <Plus size={14} /> Add Key
                         </button>
                     </div>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '8px 0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Shield size={14} color="var(--accent-success)" />
-                        Encrypted with AES-256-GCM — only decrypted during API calls
-                    </p>
 
                     {keys.length === 0 ? (
                         <div className="empty-state" style={{ padding: '32px' }}>
