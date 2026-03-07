@@ -19,7 +19,7 @@ import {
 const PROVIDERS: { id: LLMProvider; name: string; icon: React.FC<any>; color: string }[] = [
     { id: 'openrouter', name: 'OpenRouter', icon: Globe, color: 'var(--accent-primary)' },
     { id: 'groq', name: 'Groq', icon: Zap, color: '#f55036' },
-    { id: 'gemini', name: 'Google Gemini', icon: Sparkles, color: '#4285f4' },
+    { id: 'google', name: 'Google Gemini', icon: Sparkles, color: '#4285f4' },
     { id: 'openai', name: 'OpenAI', icon: Bot, color: '#10a37f' },
     { id: 'anthropic', name: 'Anthropic', icon: Shield, color: '#d4a27f' },
     { id: 'deepseek', name: 'DeepSeek', icon: Search, color: '#2563eb' },
