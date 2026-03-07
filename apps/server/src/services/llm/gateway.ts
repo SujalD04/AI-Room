@@ -54,7 +54,7 @@ async function resolveApiKey(userId: string, provider: LLMProvider): Promise<str
     const systemKeyMap: Record<LLMProvider, string> = {
         openrouter: env.OPENROUTER_API_KEY,
         groq: env.GROQ_API_KEY,
-        gemini: env.GEMINI_API_KEY,
+        google: env.GEMINI_API_KEY,
         openai: env.OPENAI_API_KEY,
         anthropic: env.ANTHROPIC_API_KEY,
         deepseek: env.DEEPSEEK_API_KEY,
@@ -80,7 +80,7 @@ const PROVIDER_CONFIG: Record<LLMProvider, { baseUrl: string; authHeader: (key: 
         baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
         authHeader: (key) => ({ 'Authorization': `Bearer ${key}` }),
     },
-    gemini: {
+    google: {
         baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
         authHeader: (key) => ({ 'Authorization': `Bearer ${key}` }),
     },

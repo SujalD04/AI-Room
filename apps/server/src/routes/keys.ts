@@ -11,7 +11,7 @@ router.use(authMiddleware);
 
 // ─── Validation ───
 const validProviders: LLMProvider[] = [
-    'openrouter', 'groq', 'gemini', 'openai', 'anthropic', 'deepseek', 'together',
+    'openrouter', 'groq', 'google', 'openai', 'anthropic', 'deepseek', 'together',
 ];
 
 const addKeySchema = z.object({
