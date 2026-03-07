@@ -13,7 +13,7 @@ import { getCroppedImg } from '@/utils/cropImage';
 import {
     Zap, ChevronLeft, Key, Plus, Trash2, Shield, Globe, Bot,
     Search, Sparkles, AlertTriangle, Check, Clock, Settings as SettingsIcon,
-    User, Mail, Edit, Lock,
+    User, Mail, Edit, Lock, ExternalLink
 } from '@/components/Icons';
 
 const PROVIDERS: { id: LLMProvider; name: string; icon: React.FC<any>; color: string }[] = [
