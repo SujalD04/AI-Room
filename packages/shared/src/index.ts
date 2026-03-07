@@ -42,7 +42,7 @@ export interface RoomMember {
 export type LLMProvider =
     | 'openrouter'
     | 'groq'
-    | 'gemini'
+    | 'google'
     | 'openai'
     | 'anthropic'
     | 'deepseek'
