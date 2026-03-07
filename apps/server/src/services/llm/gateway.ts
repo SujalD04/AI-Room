@@ -386,7 +386,7 @@ export const MODEL_CATALOG = {
         { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', free: true },
         { id: 'gemma2-9b-it', name: 'Gemma 2 9B', free: true },
     ],
-    gemini: [
+    google: [
         { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Preview)', free: true },
         { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', free: true },
         { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro Experimental', free: true },
