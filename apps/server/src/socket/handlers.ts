@@ -6,6 +6,7 @@ import { dagService } from '../services/dag';
 import { streamCompletion, MODEL_CATALOG } from '../services/llm/gateway';
 import { runCouncil } from '../services/llm/council';
 import { setupMediaHandlers, handleMediaDisconnect } from './mediaHandlers';
+import type { NoteType } from '@airoom/shared';
 import type {
     ServerToClientEvents,
     ClientToServerEvents,
@@ -132,7 +133,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                         name: room.name,
                         slug: room.slug,
                         hostId: room.hostId,
-                        maxMembers: room.maxMembers,
+                        maxMembers: room.maxMembers ?? 0,
                         isActive: room.isActive,
                         settings: room.settings as any,
                         createdAt: room.createdAt.toISOString(),
@@ -160,7 +161,7 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
                         authorName: (n as any).author?.username,
                         title: n.title,
                         content: n.content,
-                        type: n.type,
+                        type: n.type as NoteType,
                         isPinned: n.isPinned,
                         createdAt: n.createdAt.toISOString(),
                         updatedAt: n.updatedAt.toISOString(),

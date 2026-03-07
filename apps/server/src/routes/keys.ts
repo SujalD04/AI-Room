@@ -5,7 +5,7 @@ import { authMiddleware } from '../middleware/auth';
 import { encryptApiKey, decryptApiKey } from '../services/crypto';
 import type { LLMProvider } from '@airoom/shared';
 
-const router = Router();
+const router: Router = Router();
 
 router.use(authMiddleware);
 
@@ -51,10 +51,12 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
             data: {
                 userId,
                 provider: provider as any,
+                keyName: label,
+                keyHash: encryptedKey,
                 encryptedKey,
                 iv,
                 authTag,
-                label,
+                label
             },
             select: { id: true, provider: true, label: true, createdAt: true },
         });

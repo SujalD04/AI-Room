@@ -4,7 +4,7 @@ import { authMiddleware } from '../middleware/auth';
 import { dagService } from '../services/dag';
 import { prisma } from '../lib/prisma';
 
-const router = Router();
+const router: Router = Router();
 
 // All routes require authentication
 router.use(authMiddleware);

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Express } from 'express';
 import http from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -26,7 +26,7 @@ import type { ServerToClientEvents, ClientToServerEvents } from '@airoom/shared'
 validateEnv();
 
 // ─── Express App ───
-const app = express();
+const app: Express = express();
 const server = http.createServer(app);
 
 // ─── Security Middleware ───

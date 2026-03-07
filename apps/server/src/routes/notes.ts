@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
+const router: Router = Router();
 
 router.use(authMiddleware);
 
@@ -190,7 +190,7 @@ router.post('/:noteId/todos', async (req: Request, res: Response): Promise<void>
         const todo = await prisma.todoItem.create({
             data: {
                 noteId,
-                text: parsed.data.text,
+                title: parsed.data.text,
                 assigneeId: parsed.data.assigneeId,
                 order: (maxOrder._max.order ?? -1) + 1,
             },

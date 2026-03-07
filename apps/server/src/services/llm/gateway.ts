@@ -44,7 +44,7 @@ async function resolveApiKey(userId: string, provider: LLMProvider): Promise<str
 
     if (userKey) {
         try {
-            return decryptApiKey(userKey.encryptedKey, userKey.iv, userKey.authTag);
+            return decryptApiKey(userKey.encryptedKey!, userKey.iv!, userKey.authTag!);
         } catch (err) {
             console.error(`Failed to decrypt key for user ${userId}, provider ${provider}:`, err);
         }

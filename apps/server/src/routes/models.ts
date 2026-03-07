@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { MODEL_CATALOG } from '../services/llm/gateway';
 
-const router = Router();
+const router: Router = Router();
 
 router.use(authMiddleware);
 

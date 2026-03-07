@@ -6,7 +6,7 @@ import { generateToken, authMiddleware } from '../middleware/auth';
 import { authRateLimiter } from '../middleware/rateLimit';
 import { emailService } from '../services/email';
 
-const router = Router();
+const router: Router = Router();
 
 const USER_SELECT = {
     id: true,

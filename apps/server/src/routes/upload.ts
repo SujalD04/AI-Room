@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 
 // Ensure upload directory exists
