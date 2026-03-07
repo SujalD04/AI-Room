@@ -696,7 +696,7 @@ async function handleAIResponse(
     await streamCompletion(
         {
             model: modelConfig.modelId || 'google/gemini-2.0-flash-exp:free',
-            provider: modelConfig.provider || 'openrouter',
+            provider: (modelConfig.provider === 'gemini' ? 'google' : modelConfig.provider) || 'openrouter',
             messages: llmMessages,
             temperature: modelConfig.temperature,
             maxTokens: modelConfig.maxTokens,

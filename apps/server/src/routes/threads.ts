@@ -17,7 +17,15 @@ const createThreadSchema = z.object({
     title: z.string().min(1).max(100),
     modelConfig: z.object({
         modelId: z.string(),
-        provider: z.string(),
+        provider: z.enum([
+            'openrouter',
+            'groq',
+            'google',
+            'openai',
+            'anthropic',
+            'deepseek',
+            'together',
+        ]),
         temperature: z.number().optional(),
         maxTokens: z.number().optional(),
         systemPrompt: z.string().optional(),
