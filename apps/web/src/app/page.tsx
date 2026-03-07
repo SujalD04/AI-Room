@@ -3,9 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores';
+import { useTheme } from '@/components/ThemeProvider';
 import {
     Users, Bot, Sparkles, GitBranch, Shield, StickyNote, Zap, ChevronRight,
-    Check, Globe, Crown, MessageSquare, Lock, Monitor
+    Check, Globe, Crown, MessageSquare, Lock, Monitor, Sun, Moon
 } from '@/components/Icons';
 
 const FEATURES = [
@@ -108,6 +109,7 @@ const PRICING = [
 export default function LandingPage() {
     const router = useRouter();
     const { isAuthenticated, loadFromStorage } = useAuthStore();
+    const { theme, toggleTheme } = useTheme();
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
@@ -139,24 +141,52 @@ export default function LandingPage() {
                     zIndex: 10,
                 }}
             >
-                <a href="/" className="logo">
-                    <div className="logo-icon">
+                <a
+                    href="/"
+                    className="logo"
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        textDecoration: "none"
+                    }}
+                >
+                    {/* Logo Image */}
+                    <img
+                        src="/logo.png"
+                        alt="AIRoom Logo"
+                        style={{
+                            height: "32px",
+                            width: "auto",
+                            objectFit: "contain"
+                        }}
+                    />
+
+                    {/* <div className="logo-icon">
                         <Zap size={18} />
                     </div>
-                    <span className="logo-text" style={{ fontSize: '1.3rem' }}>AIRoom</span>
+                    <span className="logo-text" style={{ fontSize: '1.3rem' }}>AIRoom</span> */}
                 </a>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                     <a href="#features" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>Features</a>
-                    <a href="#how-it-works" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>How It Works</a>
-                    {/*<a href="#pricing" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>Pricing</a>*/}
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <button className="btn btn-ghost" onClick={() => router.push('/login')}>
-                            Log In
-                        </button>
-                        <button className="btn btn-primary" onClick={() => router.push('/register')}>
-                            Get Started
-                        </button>
-                    </div>
+                    <a href="#how-it-works" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>How it works</a>
+                    <a href="#pricing" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>Pricing</a>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <button
+                        onClick={toggleTheme}
+                        className="btn btn-ghost"
+                        style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        aria-label="Toggle Theme"
+                    >
+                        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                    </button>
+                    <button onClick={() => router.push('/login')} className="btn btn-ghost">
+                        Log in
+                    </button>
+                    <button onClick={() => router.push('/register')} className="btn btn-primary" style={{ height: '36px', padding: '0 20px' }}>
+                        Get Started
+                    </button>
                 </div>
             </nav>
 

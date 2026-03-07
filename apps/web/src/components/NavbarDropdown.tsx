@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores';
-import { User, Settings, LogOut, ChevronDown, Layout, Zap } from './Icons';
+import { User, Settings, LogOut, ChevronDown, Layout, Zap, Sun, Moon } from './Icons';
+import { useTheme } from './ThemeProvider';
 
 export default function NavbarDropdown() {
     const router = useRouter();
     const { user, logout } = useAuthStore();
+    const { theme, toggleTheme } = useTheme();
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +70,17 @@ export default function NavbarDropdown() {
                     </div>
 
                     <div className="dropdown-divider" />
+
+                    <button
+                        className="dropdown-item"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTheme();
+                        }}
+                    >
+                        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    </button>
 
                     <button
                         className="dropdown-item"

@@ -4,11 +4,13 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores';
-import { Zap, User, Mail, Lock, AlertTriangle, Check, X } from '@/components/Icons';
+import { useTheme } from '@/components/ThemeProvider';
+import { User, Mail, Lock, AlertTriangle, Check, X, Sun, Moon } from '@/components/Icons';
 
 export default function RegisterPage() {
     const router = useRouter();
     const { setAuth } = useAuthStore();
+    const { theme, toggleTheme } = useTheme();
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -51,129 +53,152 @@ export default function RegisterPage() {
     };
 
     const Requirement = ({ met, text }: { met: boolean; text: string }) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} className={met ? 'met' : ''}>
-            {met ? <Check size={10} color="var(--accent-success)" /> : <X size={10} color="var(--text-tertiary)" />}
-            <span>{text}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }} className={met ? 'met' : ''}>
+            {met ? <Check size={12} color="var(--accent-success)" /> : <X size={12} color="var(--text-tertiary)" />}
+            <span style={{ color: met ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>{text}</span>
         </div>
     );
 
     return (
-        <div className="content-center" style={{ background: 'var(--gradient-dark)' }}>
-            <div className="auth-container">
-                <div className="auth-card glass-strong">
-                    <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                        <a href="/" className="logo" style={{ justifyContent: 'center' }}>
-                            <div className="logo-icon" style={{ width: 48, height: 48 }}>
-                                <Zap size={24} />
-                            </div>
-                        </a>
+        <div className="auth-page-wrapper">
+            <div className="auth-card-modern">
+                <button
+                    onClick={toggleTheme}
+                    className="btn btn-ghost"
+                    style={{
+                        position: 'absolute',
+                        top: '16px',
+                        right: '16px',
+                        padding: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--text-tertiary)'
+                    }}
+                    aria-label="Toggle Theme"
+                    type="button"
+                >
+                    {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+
+                <div className="auth-header-modern">
+                    <div className="auth-logo-box">
+                        <img
+                            src="/logo.png"
+                            alt="AIRoom Logo"
+                            style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                        />
                     </div>
-                    <h1 className="auth-title">Create Account</h1>
-                    <p className="auth-subtitle">Join AIRoom and start collaborating with AI</p>
+                    <h1 className="auth-title-modern">Create Account</h1>
+                    <p className="auth-subtitle-modern">Join AIRoom and start collaborating</p>
+                </div>
 
-                    {error && (
-                        <div
-                            style={{
-                                background: 'rgba(225, 112, 85, 0.15)',
-                                color: 'var(--accent-danger)',
-                                padding: '10px 16px',
-                                borderRadius: 'var(--radius-md)',
-                                fontSize: '0.85rem',
-                                marginBottom: '16px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                            }}
-                        >
-                            <AlertTriangle size={16} />
-                            {error}
-                        </div>
-                    )}
+                {error && (
+                    <div
+                        style={{
+                            background: 'rgba(225, 112, 85, 0.15)',
+                            color: 'var(--accent-danger)',
+                            padding: '12px 16px',
+                            borderRadius: '12px',
+                            fontSize: '0.9rem',
+                            marginBottom: '24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                        }}
+                    >
+                        <AlertTriangle size={18} />
+                        {error}
+                    </div>
+                )}
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label className="form-label" htmlFor="username">
-                                <User size={12} style={{ marginRight: '4px' }} /> Username
-                            </label>
-                            <input
-                                id="username"
-                                type="text"
-                                className="input"
-                                placeholder="johndoe"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                required
-                                autoFocus
-                                minLength={3}
-                                maxLength={30}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label" htmlFor="email">
-                                <Mail size={12} style={{ marginRight: '4px' }} /> Email
-                            </label>
-                            <input
-                                id="email"
-                                type="email"
-                                className="input"
-                                placeholder="you@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label" htmlFor="password">
-                                <Lock size={12} style={{ marginRight: '4px' }} /> Password
-                            </label>
-                            <input
-                                id="password"
-                                type="password"
-                                className="input"
-                                placeholder="Strong password..."
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                minLength={8}
-                            />
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label className="form-label" htmlFor="username" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}>
+                            <User size={12} /> USERNAME
+                        </label>
+                        <input
+                            id="username"
+                            type="text"
+                            className="input-modern"
+                            placeholder="johndoe"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            autoFocus
+                            minLength={3}
+                            maxLength={30}
+                        />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label className="form-label" htmlFor="email" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}>
+                            <Mail size={12} /> EMAIL
+                        </label>
+                        <input
+                            id="email"
+                            type="email"
+                            className="input-modern"
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '8px' }}>
+                        <label className="form-label" htmlFor="password" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}>
+                            <Lock size={12} /> PASSWORD
+                        </label>
+                        <input
+                            id="password"
+                            type="password"
+                            className="input-modern"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
 
-                            {/* Strength bar */}
-                            {password.length > 0 && (
-                                <>
-                                    <div className="password-strength">
-                                        {[1, 2, 3, 4, 5].map((i) => (
+                        {/* Password strength indicator */}
+                        {password.length > 0 && (
+                            <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
+                                <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                                    {[1, 2, 3].map((step) => {
+                                        let bg = 'var(--border-subtle)';
+                                        if (pwStrength === 'weak' && step === 1) bg = 'var(--accent-danger)';
+                                        if (pwStrength === 'medium' && step <= 2) bg = 'var(--accent-warning)';
+                                        if (pwStrength === 'strong' && step <= 3) bg = 'var(--accent-success)';
+                                        return (
                                             <div
-                                                key={i}
-                                                className={`password-strength-bar ${i <= pwScore ? 'filled' : ''} ${pwStrength === 'medium' ? 'medium' : ''} ${pwStrength === 'strong' ? 'strong' : ''}`}
+                                                key={step}
+                                                style={{
+                                                    flex: 1,
+                                                    height: '4px',
+                                                    borderRadius: '2px',
+                                                    background: bg,
+                                                    transition: 'all 0.3s ease'
+                                                }}
                                             />
-                                        ))}
-                                    </div>
-                                    <div className="password-requirements">
-                                        <Requirement met={pwChecks.length} text="At least 8 characters" />
-                                        <Requirement met={pwChecks.upper} text="One uppercase letter" />
-                                        <Requirement met={pwChecks.lower} text="One lowercase letter" />
-                                        <Requirement met={pwChecks.digit} text="One digit" />
-                                        <Requirement met={pwChecks.special} text="One special character (!@#$...)" />
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                        <button
-                            type="submit"
-                            className="btn btn-primary"
-                            disabled={loading || pwScore < 5}
-                            style={{ width: '100%', marginTop: '8px' }}
-                        >
-                            {loading ? <span className="spinner" style={{ width: 18, height: 18 }} /> : 'Create Account'}
-                        </button>
-                    </form>
+                                        );
+                                    })}
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
+                                    <Requirement met={pwChecks.length} text="8+ characters" />
+                                    <Requirement met={pwChecks.upper} text="Uppercase char" />
+                                    <Requirement met={pwChecks.lower} text="Lowercase char" />
+                                    <Requirement met={pwChecks.digit} text="One number" />
+                                    <Requirement met={pwChecks.special} text="Special char (!@#)" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
-                    <p className="auth-switch">
-                        Already have an account?{' '}
-                        <a href="/login" style={{ fontWeight: 600 }}>
-                            Sign in
-                        </a>
-                    </p>
+                    <button type="submit" className="btn-modern" style={{ marginTop: '24px' }} disabled={loading}>
+                        {loading ? 'Creating Account...' : 'Create Account'}
+                    </button>
+                </form>
+
+                <div className="auth-switch-modern">
+                    Already have an account? <a href="/login">Sign in</a>
                 </div>
             </div>
         </div>

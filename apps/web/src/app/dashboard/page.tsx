@@ -106,11 +106,28 @@ export default function DashboardPage() {
                     background: 'var(--bg-secondary)',
                 }}
             >
-                <a href="/dashboard" className="logo">
-                    <div className="logo-icon" style={{ width: 28, height: 28 }}>
+                <a href="/dashboard"
+                    className="logo"
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        textDecoration: "none"
+                    }}
+                >
+                    <img
+                        src="/logo.png"
+                        alt="AIRoom Logo"
+                        style={{
+                            height: "32px",
+                            width: "auto",
+                            objectFit: "contain"
+                        }}
+                    />
+                    {/* <div className="logo-icon" style={{ width: 28, height: 28 }}>
                         <Zap size={14} />
                     </div>
-                    <span className="logo-text">AIRoom</span>
+                    <span className="logo-text">AIRoom</span> */}
                 </a>
                 <NavbarDropdown />
             </nav>
