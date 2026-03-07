@@ -189,6 +189,7 @@ router.post('/:noteId/todos', async (req: Request, res: Response): Promise<void>
 
         const todo = await prisma.todoItem.create({
             data: {
+                roomId: note.roomId,
                 noteId,
                 title: parsed.data.text,
                 assigneeId: parsed.data.assigneeId,
