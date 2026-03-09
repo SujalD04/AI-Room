@@ -7,6 +7,7 @@ interface AuthState {
     token: string | null;
     isAuthenticated: boolean;
     setAuth: (user: User, token: string) => void;
+    updateUser: (updates: Partial<User>) => void;
     logout: () => void;
     loadFromStorage: () => void;
 }
@@ -21,6 +22,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         localStorage.setItem('airoom_user', JSON.stringify(user));
         set({ user, token, isAuthenticated: true });
     },
+
+    updateUser: (updates) => set((s) => {
+        if (!s.user) return s;
+        const newUser = { ...s.user, ...updates };
+        localStorage.setItem('airoom_user', JSON.stringify(newUser));
+        return { user: newUser };
+    }),
 
     logout: () => {
         localStorage.removeItem('airoom_token');
@@ -111,11 +119,11 @@ interface ChatState {
     activeThreadId: string | null;
     messages: MessageNode[];
     activeLeafId: string | null;
-    streamingMessages: Map<string, string>; // messageId -> accumulated content
     isAiResponding: boolean;
 
     setActiveThread: (threadId: string) => void;
     setMessages: (messages: MessageNode[]) => void;
+    prependMessages: (messages: MessageNode[]) => void;
     addMessage: (message: MessageNode) => void;
     setActiveLeaf: (messageId: string) => void;
     appendStreamToken: (messageId: string, token: string) => void;
@@ -128,7 +136,6 @@ export const useChatStore = create<ChatState>((set) => ({
     activeThreadId: null,
     messages: [],
     activeLeafId: null,
-    streamingMessages: new Map(),
     isAiResponding: false,
 
     setActiveThread: (threadId) => set({ activeThreadId: threadId, messages: [], activeLeafId: null }),
@@ -136,9 +143,19 @@ export const useChatStore = create<ChatState>((set) => ({
         messages,
         activeLeafId: messages.length > 0 ? messages[messages.length - 1].id : null
     }),
+    prependMessages: (newMessages) => set((s) => {
+        const existingIds = new Set(s.messages.map(m => m.id));
+        const filtered = newMessages.filter(m => !existingIds.has(m.id));
+        return { messages: [...filtered, ...s.messages] };
+    }),
     addMessage: (message) =>
         set((s) => {
-            if (s.messages.some((m) => m.id === message.id)) return s;
+            const exists = s.messages.findIndex((m) => m.id === message.id);
+            if (exists >= 0) {
+                const next = [...s.messages];
+                next[exists] = message;
+                return { messages: next };
+            }
             return {
                 messages: [...s.messages, message],
                 activeLeafId: message.id
@@ -147,22 +164,20 @@ export const useChatStore = create<ChatState>((set) => ({
     setActiveLeaf: (messageId) => set({ activeLeafId: messageId }),
     appendStreamToken: (messageId, token) =>
         set((s) => {
-            const next = new Map(s.streamingMessages);
-            next.set(messageId, (next.get(messageId) || '') + token);
-            return { streamingMessages: next };
+            const exists = s.messages.findIndex((m) => m.id === messageId);
+            if (exists >= 0) {
+                const next = [...s.messages];
+                next[exists] = { ...next[exists], content: next[exists].content + token };
+                return { messages: next };
+            }
+            return s;
         }),
-    clearStreamingMessage: (messageId) =>
-        set((s) => {
-            const next = new Map(s.streamingMessages);
-            next.delete(messageId);
-            return { streamingMessages: next };
-        }),
+    clearStreamingMessage: (messageId) => set((s) => s),
     setAiResponding: (isResponding) => set({ isAiResponding: isResponding }),
     clearChat: () =>
         set({
             activeThreadId: null,
             messages: [],
-            streamingMessages: new Map(),
             isAiResponding: false,
         }),
 }));

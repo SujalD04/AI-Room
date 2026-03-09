@@ -129,6 +129,7 @@ export interface Note {
     roomId: string;
     authorId: string;
     authorName?: string;
+    author?: { id: string; username: string };
     title: string;
     content: any; // TipTap JSON
     type: NoteType;
@@ -167,7 +168,7 @@ export interface ServerToClientEvents {
 
     // Chat
     'chat:message': (message: MessageNode) => void;
-    'chat:stream_start': (data: { messageId: string; threadId: string; modelId: string }) => void;
+    'chat:stream_start': (data: { messageId: string; threadId: string; parentId: string | null; modelId: string }) => void;
     'chat:stream_token': (data: { messageId: string; token: string }) => void;
     'chat:stream_end': (data: { messageId: string; metadata: MessageMetadata }) => void;
     'chat:stream_error': (data: { messageId: string; error: string }) => void;

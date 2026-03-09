@@ -199,10 +199,14 @@ async function streamOpenAICompat(
 
                 try {
                     const parsed = JSON.parse(data);
-                    const delta = parsed.choices?.[0]?.delta?.content;
+                    const delta = parsed.choices?.[0]?.delta;
+
                     if (delta) {
-                        totalTokens++;
-                        callbacks.onToken(delta);
+                        const content = delta.content || delta.reasoning_content;
+                        if (content !== undefined && content !== null) {
+                            totalTokens++;
+                            callbacks.onToken(content);
+                        }
                     }
                 } catch {
                     // Skip malformed JSON chunks
@@ -283,7 +287,7 @@ async function streamAnthropic(
                 try {
                     const parsed = JSON.parse(data);
 
-                    if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                    if (parsed.type === 'content_block_delta' && parsed.delta?.text !== undefined) {
                         totalTokens++;
                         callbacks.onToken(parsed.delta.text);
                     }
@@ -358,8 +362,11 @@ export async function getCompletion(options: LLMRequestOptions): Promise<{ conte
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
 
+    const message = (data as any).choices?.[0]?.message;
+    const content = message?.content || message?.reasoning_content || '';
+
     return {
-        content: (data as any).choices?.[0]?.message?.content || '',
+        content,
         tokensUsed: (data as any).usage?.total_tokens,
         latencyMs: Date.now() - startTime,
     };

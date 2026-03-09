@@ -141,8 +141,8 @@ export const api = {
             body: JSON.stringify(data),
         }),
 
-    getThreadMessages: (threadId: string, limit = 50) =>
-        request<{ messages: any[] }>(`/threads/${threadId}/messages?limit=${limit}`),
+    getThreadMessages: (threadId: string, limit = 50, cursor?: string) =>
+        request<{ messages: any[] }>(`/threads/${threadId}/messages?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`),
 
     getThreadTree: (threadId: string) =>
         request<{ nodes: any[]; edges: any[] }>(`/threads/${threadId}/tree`),

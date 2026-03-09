@@ -4,11 +4,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import Redis from 'ioredis';
 
 import { env, validateEnv } from './config/env';
 import { apiRateLimiter } from './middleware/rateLimit';
 import { setupSocketHandlers } from './socket/handlers';
 import { initMediasoup } from './services/media';
+import { logger, httpLogger } from './lib/logger';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -42,6 +45,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(apiRateLimiter);
+app.use(httpLogger);
 
 // ─── Health Check ───
 app.get('/api/health', (_req, res) => {
@@ -67,17 +71,21 @@ app.use((_req, res) => {
 
 // ─── Error Handler ───
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error('Unhandled error:', err);
+    logger.error('Unhandled error:', err);
     res.status(500).json({ error: 'Internal server error' });
 });
 
 // ─── Socket.IO ───
+const pubClient = new Redis(env.REDIS_URL);
+const subClient = pubClient.duplicate();
+
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
     cors: {
         origin: env.CLIENT_URL,
         methods: ['GET', 'POST'],
         credentials: true,
     },
+    adapter: createAdapter(pubClient, subClient),
     pingTimeout: 60000,
     pingInterval: 25000,
     maxHttpBufferSize: 1e7, // 10MB
@@ -87,22 +95,15 @@ setupSocketHandlers(io);
 
 // ─── Start Server ───
 async function startServer() {
-    // Initialize mediasoup workers (gracefully — don't crash if mediasoup not installed)
     try {
         await initMediasoup();
-        console.log('🎥 mediasoup initialized successfully');
+        logger.info('🎥 mediasoup initialized successfully');
     } catch (err: any) {
-        console.warn('⚠️  mediasoup unavailable (audio/video/screenshare disabled):', err.message);
-        console.warn('   Install mediasoup native dependencies to enable WebRTC features.');
+        logger.warn(`⚠️ mediasoup unavailable: ${err.message}`);
     }
 
     server.listen(env.PORT, () => {
-        console.log(`
-             AIRoom Server Running        
-    HTTP:     http://localhost:${env.PORT}  
-    Socket:   ws://localhost:${env.PORT}          
-    Mode:     ${env.NODE_ENV.padEnd(28)}
-    `);
+        logger.info(`AIRoom Server Running | HTTP: ${env.PORT} | Mode: ${env.NODE_ENV}`);
     });
 }
 

@@ -12,10 +12,13 @@ import {
     ChevronLeft, Zap, Users, Crown, Settings, Link2, Copy, Plus, Trash2,
     MessageSquare, Send, Bot, GitBranch, Hash, StickyNote, Pin, Edit, X,
     Mic, MicOff, FileText, Check, Sparkles, Globe, Search, Shield, Key,
-    ChevronRight, ChevronDown
+    ChevronRight, ChevronDown, Info
 } from '@/components/Icons';
 import VoiceChannel from '@/components/VoiceChannel';
+import UserAvatar from '@/components/UserAvatar';
 import type { MessageNode, ConversationThread, RoomMember } from '@airoom/shared';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
 
 // Provider metadata for the model selector
 const PROVIDER_META: Record<string, { name: string; icon: any; color: string }> = {
@@ -168,6 +171,9 @@ export default function RoomPage() {
     const toast = useToast();
 
     const [loading, setLoading] = useState(true);
+    const [isHydrated, setIsHydrated] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasMoreMessages, setHasMoreMessages] = useState(true);
     const [messageInput, setMessageInput] = useState('');
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [showNewThreadModal, setShowNewThreadModal] = useState(false);
@@ -200,13 +206,30 @@ export default function RoomPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+    const startTour = () => {
+        const d = driver({
+            showProgress: true,
+            steps: [
+                { element: '#tour-threads', popover: { title: 'Conversation Threads', description: 'Create and switch between different chat threads.' } },
+                { element: '#tour-members', popover: { title: 'Room Members', description: 'See who is currently in the room.' } },
+                { element: '#tour-voice', popover: { title: 'Voice Channel', description: 'Hop in to talk with others using your mic or camera.' } },
+                { element: '#tour-chat', popover: { title: 'Main Chat', description: 'Send messages, branch conversations, and interact with the AI.' } },
+                { element: '#tour-chat-input', popover: { title: 'Message Input', description: 'Type your message here. Toggle AI responses with the Bot icon!' } },
+            ]
+        });
+        d.drive();
+    };
+
     // ─── Init ───
     useEffect(() => {
         loadFromStorage();
         api.getModels().then(({ models }) => setModelCatalog(models)).catch(() => { });
+        setIsHydrated(true);
     }, []);
 
     useEffect(() => {
+        if (!isHydrated) return; // Wait until local storage is checked
+
         if (!isAuthenticated) {
             router.push('/login');
             return;
@@ -237,17 +260,25 @@ export default function RoomPage() {
         socket.on('room:presence', (data) => roomStore.setOnlineUsers(data.onlineUserIds));
         socket.on('room:typing', ({ userId, username, isTyping }) => roomStore.setTypingUser(userId, username, isTyping));
         socket.on('chat:message', (message) => chatStore.addMessage(message));
-        socket.on('chat:stream_start', ({ messageId }) => {
+        socket.on('chat:stream_start', ({ messageId, threadId, parentId, modelId }) => {
             chatStore.setAiResponding(true);
-            chatStore.appendStreamToken(messageId, '');
+            chatStore.addMessage({
+                id: messageId,
+                threadId: threadId,
+                parentId: parentId,
+                authorType: 'AI',
+                authorId: null,
+                modelId: modelId,
+                content: '',
+                metadata: {},
+                createdAt: new Date().toISOString(),
+            });
         });
         socket.on('chat:stream_token', ({ messageId, token }) => chatStore.appendStreamToken(messageId, token));
         socket.on('chat:stream_end', ({ messageId }) => {
-            chatStore.clearStreamingMessage(messageId);
             chatStore.setAiResponding(false);
         });
         socket.on('chat:stream_error', ({ messageId, error }) => {
-            chatStore.clearStreamingMessage(messageId);
             chatStore.setAiResponding(false);
             toast.error(error || 'AI response failed');
         });
@@ -291,7 +322,7 @@ export default function RoomPage() {
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatStore.messages, chatStore.streamingMessages, chatStore.activeLeafId]);
+    }, [chatStore.messages, chatStore.activeLeafId]);
 
     // ─── Branching Helpers ───
     const getActiveLineage = useCallback(() => {
@@ -357,12 +388,28 @@ export default function RoomPage() {
     const loadThreadMessages = async (threadId: string) => {
         chatStore.setActiveThread(threadId);
         chatStore.setMessages([]);
+        setHasMoreMessages(true);
         try {
             const { messages } = await api.getThreadMessages(threadId);
             chatStore.setMessages(messages);
+            if (messages.length < 50) setHasMoreMessages(false);
         } catch (err) {
             console.error('Failed to load messages:', err);
         }
+    };
+
+    const loadMoreMessages = async () => {
+        if (!chatStore.activeThreadId || isLoadingMore || !hasMoreMessages || chatStore.messages.length === 0) return;
+        setIsLoadingMore(true);
+        try {
+            const oldestId = chatStore.messages[0].id;
+            const { messages } = await api.getThreadMessages(chatStore.activeThreadId, 50, oldestId);
+            if (messages.length < 50) setHasMoreMessages(false);
+            if (messages.length > 0) chatStore.prependMessages(messages);
+        } catch (err) {
+            console.error('Failed to load more messages:', err);
+        }
+        setIsLoadingMore(false);
     };
 
     // ─── Send Message ───
@@ -591,6 +638,9 @@ export default function RoomPage() {
                     )}
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button className="btn btn-secondary btn-sm" onClick={startTour}>
+                        <Info size={14} /> Help
+                    </button>
                     <button className="btn btn-secondary btn-sm" onClick={() => setShowInviteModal(true)}>
                         <Link2 size={14} /> Invite
                     </button>
@@ -604,7 +654,7 @@ export default function RoomPage() {
                 {/* ── Left Sidebar (threads + members) ── */}
                 <aside className="room-sidebar" style={{ width: leftWidth, minWidth: 140 }}>
                     {/* Threads */}
-                    <div className="sidebar-section" style={{ flex: 1 }}>
+                    <div className="sidebar-section" id="tour-threads" style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span className="sidebar-section-title">
                                 <Hash size={12} style={{ marginRight: '4px' }} />
@@ -654,32 +704,8 @@ export default function RoomPage() {
                         )}
                     </div>
 
-                    {/* Members */}
-                    <div className="sidebar-section" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                        <span className="sidebar-section-title">
-                            <Users size={12} style={{ marginRight: '4px' }} />
-                            Members ({roomStore.members.length})
-                        </span>
-                        {roomStore.members.map((member) => (
-                            <div key={member.id} className="member-item">
-                                <div className="member-avatar">
-                                    {member.user.username?.[0]?.toUpperCase() || '?'}
-                                </div>
-                                <div className="member-info">
-                                    <div className="member-name">
-                                        {member.user.username}
-                                        {member.role === 'HOST' && (
-                                            <Crown size={12} color="var(--accent-warning)" style={{ marginLeft: '6px' }} />
-                                        )}
-                                    </div>
-                                </div>
-                                <div className={`online-dot ${roomStore.onlineUserIds.includes(member.userId) ? 'online' : 'offline'}`} />
-                            </div>
-                        ))}
-                    </div>
-
                     {/* Voice Channel */}
-                    <div className="sidebar-section" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <div className="sidebar-section" id="tour-voice" style={{ borderTop: '1px solid var(--border-subtle)' }}>
                         <VoiceChannel roomId={roomStore.currentRoom?.id || ''} userId={user?.id || ''} />
                     </div>
                 </aside>
@@ -692,8 +718,8 @@ export default function RoomPage() {
 
                 {/* ── Main Chat Area ── */}
                 <main className="room-main">
-                    <div className="messages-container">
-                        {chatStore.messages.length === 0 && chatStore.streamingMessages.size === 0 ? (
+                    <div className="messages-container" id="tour-chat">
+                        {chatStore.messages.length === 0 ? (
                             <div className="empty-state" style={{ flex: 1 }}>
                                 <div className="empty-state-icon" style={{ opacity: 0.3 }}>
                                     <MessageSquare size={48} />
@@ -705,6 +731,18 @@ export default function RoomPage() {
                             </div>
                         ) : (
                             <>
+                                {hasMoreMessages && chatStore.messages.length >= 50 && (
+                                    <div style={{ textAlign: 'center', margin: '12px 0' }}>
+                                        <button
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={loadMoreMessages}
+                                            disabled={isLoadingMore}
+                                            style={{ fontSize: '0.75rem' }}
+                                        >
+                                            {isLoadingMore ? 'Loading...' : 'Load older messages'}
+                                        </button>
+                                    </div>
+                                )}
                                 {getActiveLineage().map((msg) => {
                                     const siblings = chatStore.messages.filter(m => m.parentId === msg.parentId);
                                     const siblingIndex = siblings.findIndex(m => m.id === msg.id);
@@ -718,7 +756,7 @@ export default function RoomPage() {
                                                     <div className="message-header">
                                                         <span className="message-author">
                                                             {msg.authorType === 'USER'
-                                                                ? msg.authorName || 'User'
+                                                                ? (msg as any).author?.username || msg.authorName || 'User'
                                                                 : msg.authorType === 'AI'
                                                                     ? <><Bot size={14} /> AI</>
                                                                     : 'System'}
@@ -728,13 +766,21 @@ export default function RoomPage() {
                                                                 {msg.modelId.split('/').pop()}
                                                             </span>
                                                         )}
+                                                        {chatStore.isAiResponding && chatStore.activeLeafId === msg.id && msg.authorType === 'AI' && (
+                                                            <span className="badge badge-secondary" style={{ fontSize: '0.6rem' }}>Streaming</span>
+                                                        )}
                                                         <span className="message-time">
                                                             {new Date(msg.createdAt).toLocaleTimeString([], {
                                                                 hour: '2-digit', minute: '2-digit',
                                                             })}
                                                         </span>
                                                     </div>
-                                                    <div className="message-content">{msg.content}</div>
+                                                    <div className="message-content">
+                                                        {msg.content}
+                                                        {chatStore.isAiResponding && chatStore.activeLeafId === msg.id && msg.authorType === 'AI' && (
+                                                            <span className="streaming-cursor" />
+                                                        )}
+                                                    </div>
 
                                                     {msg.metadata?.tokensUsed && (
                                                         <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '4px', display: 'block' }}>
@@ -791,23 +837,6 @@ export default function RoomPage() {
                                     );
                                 })}
 
-                                {Array.from(chatStore.streamingMessages.entries())
-                                    .filter(([id]) => !chatStore.messages.some(m => m.id === id))
-                                    .map(([id, content]) => (
-                                        <div key={id} className="message-row">
-                                            <div className="message-bubble message-ai">
-                                                <div className="message-header">
-                                                    <span className="message-author"><Bot size={14} /> AI</span>
-                                                    <span className="badge badge-secondary" style={{ fontSize: '0.6rem' }}>Streaming</span>
-                                                </div>
-                                                <div className="message-content">
-                                                    {content}
-                                                    <span className="streaming-cursor" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-
                                 {typingUsersArr.length > 0 && (
                                     <div className="typing-indicator" style={{ marginBottom: '12px' }}>
                                         <div className="typing-dots"><span /><span /><span /></div>
@@ -820,7 +849,7 @@ export default function RoomPage() {
                     </div>
 
                     {/* Chat Input — compact */}
-                    <div className="chat-input-container" style={{ padding: '8px 16px' }}>
+                    <div className="chat-input-container" id="tour-chat-input" style={{ padding: '8px 16px' }}>
                         <div className="chat-input-wrapper">
                             <button
                                 className={`btn btn-icon ${requestAi ? 'btn-primary' : 'btn-ghost'}`}
@@ -938,26 +967,29 @@ export default function RoomPage() {
                     )}
 
                     {activePanel === 'members' && (
-                        <div className="sidebar-section">
-                            <span className="sidebar-section-title">Online ({roomStore.onlineUserIds.length})</span>
+                        <div className="sidebar-section" id="tour-members">
+                            <span className="sidebar-section-title">
+                                Members ({roomStore.onlineUserIds.length} online / {roomStore.members.length} total)
+                            </span>
                             {roomStore.members
-                                .sort((a, b) => {
-                                    const aOnline = roomStore.onlineUserIds.includes(a.userId) ? 0 : 1;
-                                    const bOnline = roomStore.onlineUserIds.includes(b.userId) ? 0 : 1;
-                                    return aOnline - bOnline;
-                                })
+                                .filter((member) => roomStore.onlineUserIds.includes(member.userId))
                                 .map((member) => (
                                     <div key={member.id} className="member-item" style={{ justifyContent: 'space-between' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div className="member-avatar">{member.user.username?.[0]?.toUpperCase() || '?'}</div>
+                                            <UserAvatar user={member.user} className="member-avatar" />
                                             <div>
                                                 <div className="member-name">{member.user.username}</div>
                                                 <div className="member-role">{member.role}</div>
                                             </div>
                                         </div>
-                                        <div className={`online-dot ${roomStore.onlineUserIds.includes(member.userId) ? 'online' : 'offline'}`} />
+                                        <div className={`online-dot online`} />
                                     </div>
                                 ))}
+                            {roomStore.members.filter((member) => roomStore.onlineUserIds.includes(member.userId)).length === 0 && (
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', padding: '12px' }}>
+                                    No members currently online.
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -1018,7 +1050,7 @@ export default function RoomPage() {
                                             </div>
                                         )}
                                         <div className="note-meta">
-                                            <span>{note.authorName || 'Unknown'}</span>
+                                            <span>{note.author?.username || note.authorName || 'Unknown'}</span>
                                             <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
                                         </div>
                                     </div>

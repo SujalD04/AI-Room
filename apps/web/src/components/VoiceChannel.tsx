@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Device } from 'mediasoup-client';
 import { getSocket } from '@/lib/socket';
 import { useRoomStore } from '@/stores';
-import { Phone, PhoneOff, Mic, MicOff, Camera, CameraOff, Monitor, Zap } from './Icons';
+import { Phone, PhoneOff, Mic, MicOff, Camera, CameraOff, Users, AlertTriangle, Monitor, Zap } from './Icons';
+import UserAvatar from './UserAvatar';
 import { useToast } from '@/components/Toast';
 
 interface VoiceChannelProps {
@@ -440,14 +441,15 @@ export default function VoiceChannel({ roomId, userId }: VoiceChannelProps) {
                             const userObj = roomStore.members.find(m => m.userId === mem.userId)?.user;
                             const isSelf = mem.userId === userId;
                             const username = isSelf ? 'You' : (userObj?.username || 'Unknown');
-                            const initial = username[0]?.toUpperCase();
+                            // const initial = username[0]?.toUpperCase(); // No longer needed with UserAvatar
 
                             return (
                                 <div key={mem.userId} className="voice-member-card">
                                     <div className="avatar-wrapper">
-                                        <div className={`avatar-large ${mem.audioOn ? 'speaking' : ''}`}>
-                                            {initial}
-                                        </div>
+                                        <UserAvatar
+                                            user={userObj}
+                                            className={`avatar-large ${mem.audioOn ? 'speaking' : ''}`}
+                                        />
                                         <div className="status-badges">
                                             {!mem.audioOn && <div className="badge-icon mute"><MicOff size={10} /></div>}
                                             {mem.videoOn && <div className="badge-icon video"><Camera size={10} /></div>}

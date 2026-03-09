@@ -1,5 +1,10 @@
 import { prisma } from '../lib/prisma';
 import type { MessageNode as MessageNodeType, MessageMetadata } from '@airoom/shared';
+import Redis from 'ioredis';
+import { env } from '../config/env';
+import { generateEmbedding } from './llm/vector';
+
+const redis = new Redis(env.REDIS_URL);
 
 /**
  * DAG Conversation Engine
@@ -38,6 +43,14 @@ export class DAGService {
     }) {
         const { id, threadId, parentId, authorType, authorId, modelId, content, metadata, edgeType } = params;
 
+        let vectorStr: string | null = null;
+        try {
+            const vec = await generateEmbedding(content);
+            vectorStr = `[${vec.join(',')}]`;
+        } catch (err: any) {
+            console.warn(`Failed to generate embedding for message ${id || '(new)'}:`, err.message);
+        }
+
         // Create the message node
         const node = await prisma.messageNode.create({
             data: {
@@ -55,16 +68,29 @@ export class DAGService {
             },
         });
 
+        // Save embedding vector via raw query
+        if (vectorStr) {
+            try {
+                await prisma.$executeRawUnsafe(`UPDATE "MessageNode" SET embedding = '${vectorStr}'::vector WHERE id = '${node.id}'`);
+            } catch (err: any) {
+                console.error(`Failed to save embedding for message ${node.id}:`, err.message);
+            }
+        }
+
         // Create the edge if there's a parent
         if (parentId) {
             await prisma.messageEdge.create({
                 data: {
                     parentId,
                     childId: node.id,
+                    // @ts-ignore
                     edgeType: edgeType || 'REPLY',
                 },
             });
         }
+
+        // Invalidate tree cache
+        await redis.del(`thread:tree:${threadId}`);
 
         return node;
     }
@@ -98,15 +124,50 @@ export class DAGService {
 
     /**
      * Build an LLM-ready message array from the ancestor path.
-     * Converts our DAG nodes into the standard role/content format.
+     * Uses pgvector to retrieve semantic memories from OTHER branches
+     * and injects them into the system prompt without polluting the main context.
      */
     async buildLLMContext(messageId: string, systemPrompt?: string): Promise<Array<{ role: 'system' | 'user' | 'assistant'; content: string }>> {
         const path = await this.getAncestorPath(messageId);
+        if (path.length === 0) return [];
+
+        const pathIds = path.map((n) => n.id);
+        const threadId = path[0].threadId;
+        const latestQuery = path[path.length - 1]?.content;
+
+        let ragContext = '';
+        if (latestQuery) {
+            try {
+                const queryVector = await generateEmbedding(latestQuery);
+                const vectorStr = `[${queryVector.join(',')}]`;
+
+                // Exclude the current path IDs so we only search OTHER branches
+                const pathInClause = pathIds.map(id => `'${id}'`).join(',');
+
+                const similarDocs: any[] = await prisma.$queryRawUnsafe(`
+                    SELECT content, 1 - (embedding <=> '${vectorStr}'::vector) as similarity
+                    FROM "MessageNode"
+                    WHERE "threadId" = '${threadId}'
+                      AND id NOT IN (${pathInClause})
+                      AND embedding IS NOT NULL
+                    ORDER BY embedding <=> '${vectorStr}'::vector
+                    LIMIT 3;
+                `);
+
+                // Only include strongly relevant memories (e.g., sim > 0.7) depending on model, but we'll just take top 3
+                if (similarDocs && similarDocs.length > 0) {
+                    ragContext = "\n\n[Context from other branches you may find useful]:\n" +
+                        similarDocs.map(d => `- ${d.content}`).join('\n');
+                }
+            } catch (err: any) {
+                console.warn('Vector search failed (skipping RAG):', err.message);
+            }
+        }
+
         const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
 
-        if (systemPrompt) {
-            messages.push({ role: 'system', content: systemPrompt });
-        }
+        const finalSystemPrompt = (systemPrompt || 'You are a helpful AI assistant.') + ragContext;
+        messages.push({ role: 'system', content: finalSystemPrompt });
 
         for (const node of path) {
             if (node.authorType === 'USER') {
@@ -124,8 +185,15 @@ export class DAGService {
     /**
      * Get the tree structure of a thread for visualization.
      * Returns all nodes with their edges, organized for ReactFlow rendering.
+     * Uses Redis caching since this can be heavy for large threads.
      */
     async getThreadTree(threadId: string) {
+        const cacheKey = `thread:tree:${threadId}`;
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+
         const [messages, edges] = await Promise.all([
             prisma.messageNode.findMany({
                 where: { threadId },
@@ -141,7 +209,9 @@ export class DAGService {
             }),
         ]);
 
-        return { messages, edges };
+        const result = { messages, edges };
+        await redis.set(cacheKey, JSON.stringify(result), 'EX', 3600); // cache for 1 hour
+        return result;
     }
 
     /**
@@ -158,17 +228,25 @@ export class DAGService {
     }
 
     /**
-     * Get the latest messages in a thread (leaf nodes for the active branch).
+     * Get the latest messages in a thread, supporting cursor pagination.
      */
-    async getThreadMessages(threadId: string, limit = 50) {
-        return prisma.messageNode.findMany({
+    async getThreadMessages(threadId: string, limit = 50, cursor?: string) {
+        const query: any = {
             where: { threadId },
             include: {
                 author: { select: { id: true, username: true, avatarUrl: true } },
             },
-            orderBy: { createdAt: 'asc' },
+            orderBy: { createdAt: 'desc' },
             take: limit,
-        });
+        };
+
+        if (cursor) {
+            query.cursor = { id: cursor };
+            query.skip = 1;
+        }
+
+        const messages = await prisma.messageNode.findMany(query);
+        return messages.reverse();
     }
 
     /**
@@ -186,7 +264,7 @@ export class DAGService {
             },
         });
 
-        return edges.map((e) => ({ ...e.child, edgeType: e.edgeType }));
+        return edges.map((e) => ({ ...e.child, edgeType: (e as any).edgeType }));
     }
 
     /**
@@ -223,6 +301,12 @@ export class DAGService {
         const result = await prisma.messageNode.deleteMany({
             where: { id: { in: ids } },
         });
+
+        // Invalidate tree cache after branch deletion
+        const node = await prisma.messageNode.findUnique({ where: { id: messageId }, select: { threadId: true } });
+        if (node?.threadId) {
+            await redis.del(`thread:tree:${node.threadId}`);
+        }
 
         return result.count;
     }

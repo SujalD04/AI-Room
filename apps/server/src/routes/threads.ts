@@ -162,6 +162,7 @@ router.get('/:threadId/messages', async (req, res) => {
     try {
         const { threadId } = req.params;
         const limit = parseInt(req.query.limit as string) || 50;
+        const cursor = req.query.cursor as string | undefined;
         const userId = (req as any).user.userId;
 
         // Verify access
@@ -180,7 +181,7 @@ router.get('/:threadId/messages', async (req, res) => {
             return res.status(403).json({ error: 'Not a member of this room' });
         }
 
-        const messages = await dagService.getThreadMessages(threadId, limit);
+        const messages = await dagService.getThreadMessages(threadId, limit, cursor);
 
         res.json({
             messages: messages.map((msg: any) => ({

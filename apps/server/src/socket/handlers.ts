@@ -2,8 +2,10 @@ import { Server, Socket } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken, AuthPayload } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
+import { ModelConfig, LLMProvider } from '@airoom/shared';
 import { dagService } from '../services/dag';
-import { streamCompletion, MODEL_CATALOG } from '../services/llm/gateway';
+import { streamCompletion, getCompletion } from '../services/llm/gateway';
+import { logger } from '../lib/logger';
 import { runCouncil } from '../services/llm/council';
 import { setupMediaHandlers, handleMediaDisconnect } from './mediaHandlers';
 import type { NoteType } from '@airoom/shared';
@@ -61,9 +63,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
         const socket = rawSocket as AuthenticatedSocket;
         const userId = socket.data.user.userId;
 
-        console.log(`⚡ User connected: ${userId}`);
+        logger.info(`⚡ User connected via WS: ${userId}`);
 
-        // ─── Room: Join ───
+        // Set user status online ───
         socket.on('room:join', async (data, callback) => {
             try {
                 const { roomSlug } = data;
@@ -619,6 +621,9 @@ export function setupSocketHandlers(io: Server<ClientToServerEvents, ServerToCli
 
         // ─── Disconnect ───
         socket.on('disconnect', async () => {
+            logger.info(`⚡ User disconnected via WS: ${userId}`);
+
+            // Remove from room // Clear typing indicator for the disconnected user
             if (socket.data.roomId) {
                 // Clear typing indicator for the disconnected user
                 const user = await prisma.user.findUnique({
@@ -688,6 +693,7 @@ async function handleAIResponse(
     io.to(roomId).emit('chat:stream_start', {
         messageId: aiMessageId,
         threadId,
+        parentId: parentMessageId,
         modelId: modelConfig.modelId || 'default',
     });
 
