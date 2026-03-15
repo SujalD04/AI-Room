@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../prisma/generated-client';
 
 // Singleton Prisma client to prevent connection leaks in dev
 const globalForPrisma = globalThis as unknown as {
