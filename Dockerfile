@@ -66,14 +66,13 @@ COPY apps/server/prisma/ ./apps/server/prisma/
 RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN pnpm install --frozen-lockfile --prod
 
-# Copy built output from builder stage
-COPY --from=builder /app/apps/server/dist/ ./apps/server/dist/
-# Copy generated Prisma client from custom local output
-COPY --from=builder /app/apps/server/prisma/generated-client/ ./apps/server/prisma/generated-client/
+# Copy built output
+COPY --from=builder --chown=airoom:airoom /app/apps/server/dist/ ./apps/server/dist/
+COPY --from=builder --chown=airoom:airoom /app/apps/server/prisma/generated-client/ ./apps/server/prisma/generated-client/
 
-# Create directories for uploads and logs
+# Create specific writable directories
 RUN mkdir -p /app/apps/server/public/uploads /app/apps/server/logs \
-    && chown -R airoom:airoom /app
+    && chown -R airoom:airoom /app/apps/server/public /app/apps/server/logs
 
 USER airoom
 
