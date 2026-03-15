@@ -68,9 +68,8 @@ RUN pnpm install --frozen-lockfile --prod
 
 # Copy built output from builder stage
 COPY --from=builder /app/apps/server/dist/ ./apps/server/dist/
-# Copy generated Prisma client
+# Copy generated Prisma client (locations depend on pnpm hoisting)
 COPY --from=builder /app/apps/server/node_modules/.prisma/ ./apps/server/node_modules/.prisma/
-COPY --from=builder /app/node_modules/.prisma/ ./node_modules/.prisma/ 2>/dev/null || true
 
 # Create directories for uploads and logs
 RUN mkdir -p /app/apps/server/public/uploads /app/apps/server/logs \
