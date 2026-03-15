@@ -10,11 +10,12 @@
         "strict": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
+        "incremental": true,
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
-        "declaration": true,
-        "declarationMap": true,
-        "sourceMap": true,
+        "declaration": false,
+        "declarationMap": false,
+        "sourceMap": false,
         "paths": {
             "@/*": [
                 "./src/*"
