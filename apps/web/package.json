@@ -9,9 +9,8 @@
         "lint": "next lint"
     },
     "dependencies": {
-        "@airoom/shared": "*",
-        "driver.js": "^1.4.0",
         "@airoom/shared": "workspace:*",
+        "driver.js": "^1.4.0",
         "mediasoup-client": "^3.18.7",
         "next": "^15.1.0",
         "react": "^19.0.0",

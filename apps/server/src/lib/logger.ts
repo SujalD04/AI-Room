@@ -1,5 +1,7 @@
 import winston from 'winston';
 import morgan from 'morgan';
+import path from 'path';
+import fs from 'fs';
 
 const { combine, timestamp, printf, colorize } = winston.format;
 
@@ -11,19 +13,45 @@ const customFormat = printf(({ level, message, timestamp, ...metadata }) => {
     return msg;
 });
 
+// Ensure logs directory exists in production
+const logsDir = path.resolve(process.cwd(), 'logs');
+if (process.env.NODE_ENV === 'production') {
+    fs.mkdirSync(logsDir, { recursive: true });
+}
+
+const transports: winston.transport[] = [
+    new winston.transports.Console({
+        format: combine(
+            process.env.NODE_ENV !== 'production' ? colorize() : winston.format.uncolorize(),
+            customFormat
+        ),
+    }),
+];
+
+// Add file transports in production
+if (process.env.NODE_ENV === 'production') {
+    transports.push(
+        new winston.transports.File({
+            filename: path.join(logsDir, 'error.log'),
+            level: 'error',
+            maxsize: 10 * 1024 * 1024, // 10MB
+            maxFiles: 5,
+        }),
+        new winston.transports.File({
+            filename: path.join(logsDir, 'combined.log'),
+            maxsize: 10 * 1024 * 1024, // 10MB
+            maxFiles: 10,
+        })
+    );
+}
+
 export const logger = winston.createLogger({
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     format: combine(
         timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        process.env.NODE_ENV !== 'production' ? colorize() : winston.format.uncolorize(),
         customFormat
     ),
-    transports: [
-        new winston.transports.Console(),
-        // Add file transports in production if needed
-        // new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-        // new winston.transports.File({ filename: 'logs/combined.log' }),
-    ],
+    transports,
 });
 
 // Morgan middleware for HTTP request logging

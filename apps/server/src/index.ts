@@ -28,6 +28,34 @@ import type { ServerToClientEvents, ClientToServerEvents } from '@airoom/shared'
 // Validate environment
 validateEnv();
 
+// ─── CORS Origin Resolver ───
+// Supports comma-separated origins in CLIENT_URL: "https://app.com,https://*.vercel.app"
+const allowedOrigins = env.CLIENT_URL.split(',').map((o) => o.trim()).filter(Boolean);
+
+function isOriginAllowed(origin: string | undefined): boolean {
+    if (!origin) return false;
+    return allowedOrigins.some((pattern) => {
+        if (pattern.includes('*')) {
+            const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
+            return regex.test(origin);
+        }
+        return pattern === origin;
+    });
+}
+
+const corsOptions: cors.CorsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, server-to-server)
+        if (!origin || isOriginAllowed(origin)) {
+            callback(null, true);
+        } else {
+            logger.warn(`CORS blocked origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+};
+
 // ─── Express App ───
 const app: Express = express();
 const server = http.createServer(app);
@@ -38,10 +66,7 @@ app.set('trust proxy', 1);
 app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
-app.use(cors({
-    origin: env.CLIENT_URL,
-    credentials: true,
-}));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(apiRateLimiter);
@@ -53,7 +78,9 @@ app.get('/api/health', (_req, res) => {
 });
 
 // ─── Static file serving for uploads ───
-app.use('/uploads', express.static(path.resolve(__dirname, '../public/uploads')));
+// Works from both src/ (dev) and dist/ (prod)
+const uploadsDir = path.resolve(process.cwd(), 'public/uploads');
+app.use('/uploads', express.static(uploadsDir));
 
 // ─── API Routes ───
 app.use('/api/auth', authRoutes);
@@ -81,7 +108,13 @@ const subClient = pubClient.duplicate();
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
     cors: {
-        origin: env.CLIENT_URL,
+        origin: (origin, callback) => {
+            if (!origin || isOriginAllowed(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         methods: ['GET', 'POST'],
         credentials: true,
     },
@@ -108,5 +141,20 @@ async function startServer() {
 }
 
 startServer();
+
+// ─── Graceful Shutdown ───
+function gracefulShutdown(signal: string) {
+    logger.info(`${signal} received — shutting down gracefully…`);
+    server.close(() => {
+        pubClient.quit();
+        subClient.quit();
+        logger.info('Server closed.');
+        process.exit(0);
+    });
+    // Force exit after 10s
+    setTimeout(() => process.exit(1), 10000);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export { app, server, io };

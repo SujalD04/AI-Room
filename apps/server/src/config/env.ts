@@ -3,10 +3,12 @@ import path from 'path';
 import fs from 'fs';
 
 // Try multiple .env locations (server-local first, then monorepo root)
+// Works from both src/ (dev with tsx) and dist/ (production with node)
 const envPaths = [
-    path.resolve(__dirname, '../../.env'),        // apps/server/.env (when running from src/config)
-    path.resolve(__dirname, '../../../../.env'),   // project root .env
-    path.resolve(process.cwd(), '.env'),           // cwd fallback
+    path.resolve(process.cwd(), 'apps/server/.env'), // monorepo root cwd
+    path.resolve(process.cwd(), '.env'),              // server cwd (when cd into apps/server)
+    path.resolve(__dirname, '../../.env'),             // relative to src/config or dist/config
+    path.resolve(__dirname, '../../../../.env'),       // monorepo root from src/config
 ];
 
 for (const envPath of envPaths) {
@@ -50,6 +52,13 @@ export const env = {
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY || '',
     TOGETHER_API_KEY: process.env.TOGETHER_API_KEY || '',
+
+    // Email (SMTP)
+    SMTP_HOST: process.env.SMTP_HOST || '',
+    SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
+    SMTP_USER: process.env.SMTP_USER || '',
+    SMTP_PASS: process.env.SMTP_PASS || '',
+    SMTP_FROM: process.env.SMTP_FROM || '',
 } as const;
 
 // Validate critical environment variables

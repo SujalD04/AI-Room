@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output (rebuilt in container)
+dist/
+.next/
+out/
+
+# Environment files (injected at runtime)
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Frontend (not needed for server image)
+apps/web/
+
+# Logs and temp
+logs/
+*.log
+coverage/
+
+# Miscellaneous
+11.11.0
+apps/server/fix_ts.sh
